@@ -31,6 +31,13 @@
       <section class="rank-section">
         <div v-if="loading" class="loading card">正在加载榜单数据</div>
 
+        <div v-else-if="loadError" class="error card">
+          <div class="error-icon">⚠️</div>
+          <p class="error-text">榜单数据加载失败</p>
+          <p class="error-desc">{{ loadError }}</p>
+          <button class="btn-primary btn-sm" @click="loadData">重新加载</button>
+        </div>
+
         <div v-else-if="currentList.length === 0" class="empty card">
           <div class="empty-icon">✍️</div>
           <p>还没有创作者数据，快去创建或参与故事吧！</p>
@@ -94,6 +101,7 @@ const tabs = [
 ]
 
 const loading = ref(false)
+const loadError = ref('')
 const leaderboard = ref({ byStories: [], byEntries: [], byChars: [] })
 const activeTab = ref('byStories')
 
@@ -131,11 +139,13 @@ function getUnit(tabKey) {
 
 async function loadData() {
   loading.value = true
+  loadError.value = ''
   try {
     const data = await api.getLeaderboard()
     leaderboard.value = data
   } catch (e) {
     console.error(e)
+    loadError.value = e.message || '未知错误'
   } finally {
     loading.value = false
   }
@@ -400,6 +410,29 @@ onMounted(loadData)
 .rank-value .value-unit {
   font-size: 12px;
   color: var(--text-muted);
+}
+
+.error {
+  text-align: center;
+  padding: 48px 24px;
+}
+
+.error-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.error-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--error);
+  margin-bottom: 8px;
+}
+
+.error-desc {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-bottom: 16px;
 }
 
 @media (max-width: 640px) {

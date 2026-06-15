@@ -19,16 +19,56 @@ function ensureDataDir() {
 function readData() {
   ensureDataDir();
   if (!fs.existsSync(DATA_FILE)) {
-    const initial = { stories: {} };
+    const initial = { stories: {}, authorStats: {} };
     fs.writeFileSync(DATA_FILE, JSON.stringify(initial, null, 2), 'utf-8');
     return initial;
   }
   const raw = fs.readFileSync(DATA_FILE, 'utf-8');
   try {
-    return JSON.parse(raw);
+    const data = JSON.parse(raw);
+    if (!data.authorStats) {
+      data.authorStats = buildAuthorStatsFromStories(data.stories || {});
+      writeData(data);
+    }
+    return data;
   } catch (e) {
-    return { stories: {} };
+    return { stories: {}, authorStats: {} };
   }
+}
+
+function buildAuthorStatsFromStories(stories) {
+  const authorStats = {};
+  for (const story of Object.values(stories)) {
+    const storyAuthors = new Set();
+    for (const entry of story.entries) {
+      const author = entry.author;
+      if (!authorStats[author]) {
+        authorStats[author] = {
+          author,
+          storyCount: 0,
+          entryCount: 0,
+          totalChars: 0,
+          lastActiveAt: 0,
+          storyIds: []
+        };
+      }
+      const stat = authorStats[author];
+      stat.entryCount += 1;
+      stat.totalChars += entry.content?.length || 0;
+      if (entry.createdAt > stat.lastActiveAt) {
+        stat.lastActiveAt = entry.createdAt;
+      }
+      storyAuthors.add(author);
+    }
+    for (const author of storyAuthors) {
+      const stat = authorStats[author];
+      if (!stat.storyIds.includes(story.id)) {
+        stat.storyIds.push(story.id);
+        stat.storyCount += 1;
+      }
+    }
+  }
+  return authorStats;
 }
 
 function writeData(data) {
@@ -74,6 +114,29 @@ function formatStoryDetail(story) {
   };
 }
 
+function addAuthorEntry(authorStats, author, storyId, contentLen, createdAt) {
+  if (!authorStats[author]) {
+    authorStats[author] = {
+      author,
+      storyCount: 0,
+      entryCount: 0,
+      totalChars: 0,
+      lastActiveAt: 0,
+      storyIds: []
+    };
+  }
+  const stat = authorStats[author];
+  stat.entryCount += 1;
+  stat.totalChars += contentLen;
+  if (createdAt > stat.lastActiveAt) {
+    stat.lastActiveAt = createdAt;
+  }
+  if (!stat.storyIds.includes(storyId)) {
+    stat.storyIds.push(storyId);
+    stat.storyCount += 1;
+  }
+}
+
 export function createStory({ title, content, author }) {
   const data = readData();
   const id = generateId();
@@ -93,6 +156,7 @@ export function createStory({ title, content, author }) {
   };
   updateStoryStatus(story);
   data.stories[id] = story;
+  addAuthorEntry(data.authorStats, author, id, content?.length || 0, now);
   writeData(data);
   return formatStoryDetail(story);
 }
@@ -155,6 +219,7 @@ export function addEntry(storyId, { content, author }) {
   });
   story.updatedAt = now;
   updateStoryStatus(story);
+  addAuthorEntry(data.authorStats, author, storyId, contentLen, now);
   writeData(data);
   return { success: true, story: formatStoryDetail(story) };
 }
@@ -183,35 +248,13 @@ export function resetStory(storyId) {
 
 export function getLeaderboard() {
   const data = readData();
-  const authorMap = new Map();
-
-  for (const story of Object.values(data.stories)) {
-    const storyAuthors = new Set();
-    for (const entry of story.entries) {
-      const author = entry.author;
-      if (!authorMap.has(author)) {
-        authorMap.set(author, {
-          author,
-          storyCount: 0,
-          entryCount: 0,
-          totalChars: 0,
-          lastActiveAt: 0
-        });
-      }
-      const stat = authorMap.get(author);
-      stat.entryCount += 1;
-      stat.totalChars += entry.content?.length || 0;
-      if (entry.createdAt > stat.lastActiveAt) {
-        stat.lastActiveAt = entry.createdAt;
-      }
-      storyAuthors.add(author);
-    }
-    for (const author of storyAuthors) {
-      authorMap.get(author).storyCount += 1;
-    }
-  }
-
-  const list = Array.from(authorMap.values());
+  const list = Object.values(data.authorStats).map(s => ({
+    author: s.author,
+    storyCount: s.storyCount,
+    entryCount: s.entryCount,
+    totalChars: s.totalChars,
+    lastActiveAt: s.lastActiveAt
+  }));
 
   return {
     byStories: [...list].sort((a, b) => b.storyCount - a.storyCount || b.entryCount - a.entryCount || b.totalChars - a.totalChars),
