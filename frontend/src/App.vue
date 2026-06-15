@@ -8,6 +8,7 @@
         </router-link>
         <nav class="nav">
           <router-link to="/" class="nav-link" exact-active-class="active">故事广场</router-link>
+          <router-link to="/leaderboard" class="nav-link" active-class="active">创作者榜单</router-link>
           <router-link to="/admin" class="nav-link" active-class="active">管理中心</router-link>
         </nav>
       </div>

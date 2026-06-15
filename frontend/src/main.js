@@ -3,6 +3,7 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import App from './App.vue'
 import StoryList from './views/StoryList.vue'
 import StoryDetail from './views/StoryDetail.vue'
+import Leaderboard from './views/Leaderboard.vue'
 import AdminPanel from './views/AdminPanel.vue'
 import './style.css'
 
@@ -11,6 +12,7 @@ const router = createRouter({
   routes: [
     { path: '/', name: 'home', component: StoryList },
     { path: '/story/:id', name: 'story', component: StoryDetail, props: true },
+    { path: '/leaderboard', name: 'leaderboard', component: Leaderboard },
     { path: '/admin', name: 'admin', component: AdminPanel }
   ]
 })

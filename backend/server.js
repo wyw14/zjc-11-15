@@ -6,6 +6,7 @@ import {
   getStoryById,
   addEntry,
   resetStory,
+  getLeaderboard,
   MAX_PARTICIPANTS,
   MAX_CHARS_PER_STORY
 } from './storage.js';
@@ -42,6 +43,16 @@ app.get('/api/stories/:id', (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: '获取故事详情失败' });
+  }
+});
+
+app.get('/api/leaderboard', (_req, res) => {
+  try {
+    const leaderboard = getLeaderboard();
+    res.json(leaderboard);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: '获取创作者榜单失败' });
   }
 });
 

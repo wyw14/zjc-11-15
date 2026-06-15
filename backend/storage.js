@@ -181,4 +181,43 @@ export function resetStory(storyId) {
   return { success: true, story: formatStoryDetail(story) };
 }
 
+export function getLeaderboard() {
+  const data = readData();
+  const authorMap = new Map();
+
+  for (const story of Object.values(data.stories)) {
+    const storyAuthors = new Set();
+    for (const entry of story.entries) {
+      const author = entry.author;
+      if (!authorMap.has(author)) {
+        authorMap.set(author, {
+          author,
+          storyCount: 0,
+          entryCount: 0,
+          totalChars: 0,
+          lastActiveAt: 0
+        });
+      }
+      const stat = authorMap.get(author);
+      stat.entryCount += 1;
+      stat.totalChars += entry.content?.length || 0;
+      if (entry.createdAt > stat.lastActiveAt) {
+        stat.lastActiveAt = entry.createdAt;
+      }
+      storyAuthors.add(author);
+    }
+    for (const author of storyAuthors) {
+      authorMap.get(author).storyCount += 1;
+    }
+  }
+
+  const list = Array.from(authorMap.values());
+
+  return {
+    byStories: [...list].sort((a, b) => b.storyCount - a.storyCount || b.entryCount - a.entryCount || b.totalChars - a.totalChars),
+    byEntries: [...list].sort((a, b) => b.entryCount - a.entryCount || b.storyCount - a.storyCount || b.totalChars - a.totalChars),
+    byChars: [...list].sort((a, b) => b.totalChars - a.totalChars || b.entryCount - a.entryCount || b.storyCount - a.storyCount)
+  };
+}
+
 export { MAX_PARTICIPANTS, MAX_CHARS_PER_STORY };
